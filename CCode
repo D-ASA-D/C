@@ -1,1 +1,181 @@
-ptint(1)
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <windows.h>
+
+// Удаляет все элементы, которые меньше среднего арифметического, и возвращает новый указатель
+int* deleteBelowAverage(int* row) {
+    int size = row[0];
+    if (size == 0) return row;
+
+    int sum = 0;
+    for (int i = 1; i <= size; i++) {
+        sum += row[i];
+    }
+    double avg = (double)sum / size;
+
+    // Удаляем элементы меньше среднего арифметического
+    int newSize = 0;
+    for (int i = 1; i <= size; i++) {
+        if (row[i] >= avg) {
+            row[++newSize] = row[i];
+        }
+    }
+
+    row = realloc(row, (newSize + 1) * sizeof(int)); // Перевыделяем память
+    row[0] = newSize; // Обновляем размер строки
+    return row;
+}
+
+// Добавляет N случайных элементов начиная с позиции K и возвращает новый указатель
+int* addElements(int* row, int N, int K) {
+    int size = row[0];
+    int newSize = size + N;
+
+    row = realloc(row, (newSize + 1) * sizeof(int)); // Расширяем строку
+    for (int i = size; i >= K; i--) {
+        row[i + N] = row[i]; // Сдвигаем элементы вправо
+    }
+    for (int i = K; i < K + N; i++) {
+        row[i] = rand() % 100; // Добавляем случайные числа
+    }
+    row[0] = newSize; // Обновляем размер строки
+    return row;
+}
+
+// Сдвигает все нулевые элементы на M позиций вправо (память не меняется)
+int* shiftZeros(int* row, int M) {
+    int size = row[0];
+    for (int i = size; i > 0; i--) {
+        if (row[i] == 0) {
+            for (int j = i; j < size && j < i + M; j++) {
+                int temp = row[j];
+                row[j] = row[j + 1];
+                row[j + 1] = temp; // Сдвигаем нули вправо
+            }
+        }
+    }
+    return row;
+}
+
+// Зануляет все элементы, равные среднему арифметическому (память не меняется)
+int* zeroElementsEqualAverage(int* row) {
+    int size = row[0];
+    if (size == 0) return row;
+
+    int sum = 0;
+    for (int i = 1; i <= size; i++) {
+        sum += row[i];
+    }
+    double avg = (double)sum / size;
+
+    for (int i = 1; i <= size; i++) {
+        if (row[i] == (int)avg) {
+            row[i] = 0;
+        }
+    }
+    return row;
+}
+
+// Освобождает память для массива строк
+void freeArray(int** array, int A) {
+    for (int i = 0; i < A; i++) {
+        free(array[i]);
+    }
+    free(array);
+}
+
+int main() {
+    SetConsoleOutputCP(65001); // Настраиваем консоль на вывод UTF-8
+    srand(time(NULL)); // Инициализация генератора случайных чисел
+
+    int A, B, min, max, N, K, M;
+
+    // Ввод параметров массива
+    printf("Введите количество строк массива (A): ");
+    scanf("%d", &A);
+    printf("Введите количество элементов в строке (B): ");
+    scanf("%d", &B);
+    printf("Введите минимальное значение: ");
+    scanf("%d", &min);
+    printf("Введите максимальное значение: ");
+    scanf("%d", &max);
+
+    // Проверяем корректность диапазона
+    if (min > max) {
+        printf("Ошибка: Минимальное значение больше максимального\n");
+        return 1;
+    }
+
+    // Создание массива A через malloc
+    int** array = (int**)malloc(A * sizeof(int*)); // Выделяем память для массива указателей
+    if (array == NULL) {
+        printf("Ошибка: Не удалось выделить память для массива\n");
+        return 1;
+    }
+
+    // Заполнение массива строками
+    for (int i = 0; i < A; i++) {
+        array[i] = (int*)malloc((B + 1) * sizeof(int)); // Выделяем память для каждой строки
+        if (array[i] == NULL) {
+            printf("Ошибка: Не удалось выделить память для строки %d\n", i + 1);
+            return 1;
+        }
+
+        array[i][0] = B; // Первый элемент строки — её размер
+        for (int j = 1; j <= B; j++) {
+            array[i][j] = min + rand() % (max - min + 1); // Заполнение случайными числами
+        }
+    }
+
+    // Ввод дополнительных параметров
+    printf("Введите количество добавляемых элементов (N): ");
+    scanf("%d", &N);
+    printf("Введите начальную позицию для добавления (K): ");
+    scanf("%d", &K);
+    printf("Введите количество позиций для сдвига (M): ");
+    scanf("%d", &M);
+
+    // Вывод исходного массива
+    printf("\nИсходный массив:\n");
+    for (int i = 0; i < A; i++) {
+        printf("Строка %d (размер %d): ", i + 1, array[i][0]);
+        for (int j = 1; j <= array[i][0]; j++) {
+            printf("%d ", array[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Применяем операции к строкам
+    for (int i = 0; i < A; i++) {
+        if (i % 4 == 0) { // Удаление
+            array[i] = deleteBelowAverage(array[i]);
+            printf("Удалены элементы меньше среднего арифметического из строки %d.\n", i + 1);
+        } else if (i % 4 == 1) { // Добавление
+            array[i] = addElements(array[i], N, K);
+            printf("Добавлено %d случайных элементов начиная с позиции %d в строку %d.\n", N, K, i + 1);
+        } else if (i % 4 == 2) { // Сдвиг
+            array[i] = shiftZeros(array[i], M);
+            printf("Сдвинуты нулевые элементы на %d позиции вправо в строке %d.\n", M, i + 1);
+        } else if (i % 4 == 3) { // Зануление
+            array[i] = zeroElementsEqualAverage(array[i]);
+            printf("Занулены элементы равные среднему арифметическому в строке %d.\n", i + 1);
+        }
+    }
+
+    // Вывод модифицированного массива
+    printf("\nМодифицированный массив:\n");
+    for (int i = 0; i < A; i++) {
+        printf("Строка %d (размер %d): ", i + 1, array[i][0]);
+        for (int j = 1; j <= array[i][0]; j++) {
+            printf("%d ", array[i][j]);
+        }
+        printf("\n");
+    }
+
+    // Освобождаем память
+    freeArray(array, A);
+
+    return 0;
+}
+
